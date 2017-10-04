@@ -1,5 +1,6 @@
 # pygame_sample
 pygameの学習過程で作成したプログラム集です。
+Python3系で動作します。
 
 ## color_picker.pyw
 ウインドウを、設定したRGBカラーで塗りつぶすプログラムです。  
