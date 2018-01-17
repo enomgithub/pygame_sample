@@ -1,8 +1,11 @@
+import argparse
 import inspect
 import math
+import os
 import random
 import sys
 
+from PIL import Image
 import pygame
 from pygame.locals import QUIT
 
@@ -242,6 +245,21 @@ def convert(surface, func, path):
         return src_conv
 
 
+def get_image_size(path):
+    with Image.open(path) as img:
+        width = img.size[0]
+        height = img.size[1]
+    return (width, height)
+
+
+def draw(surface, src, width, height, row, column):
+    for i in range(row):
+        y_top = height * i
+        for j in range(column):
+            x_left = width * j
+            surface.blit(src[i * column + j], (x_left, y_top))
+
+
 def loop(fpsclock, fps):
     pygame.display.update()
     fpsclock.tick(fps)
@@ -253,29 +271,38 @@ def quit():
 
 
 def main():
-    WIDTH = 240
-    HEIGHT = 240
-    FPS = 5
+    parser = argparse.ArgumentParser(description="""
+                                     Examples about image processing""")
+    parser.add_argument("path", type=str, help="path of image file")
+    args = parser.parse_args()
+    path = os.path.abspath(args.path)
+    assert os.path.exists(path), "File not found."
+
+    try:
+        width, height = get_image_size(path)
+    except OSError:
+        print("Can not open this file.")
+        return
+
     CONVERT = [negative, grayscale, noise, brightness,
                sin_curve, wave, edge, emboss, blur,
                mosaic, ripple]
-
     pygame.init()
-    SURFACE = pygame.display.set_mode((WIDTH * 4, HEIGHT * 3))
+    ROW = 3
+    COLUMN = 4
+    surface = pygame.display.set_mode((width * COLUMN, height * ROW))
+    FPS = 5
     FPSCLOCK = pygame.time.Clock()
-    PATH = "./src/cat.png"
 
     src = []
-    src.append(pygame.image.load(PATH).convert())
+    src.append(pygame.image.load(path).convert())
     for func in CONVERT:
-        src.append(convert(SURFACE, func, PATH))
+        src.append(convert(surface, func, path))
     while True:
         for event in pygame.event.get():
             if event.type == QUIT:
                 quit()
-        for i in range(3):
-            for j in range(4):
-                SURFACE.blit(src[i * 4 + j], (WIDTH * j, HEIGHT * i))
+        draw(surface, src, width, height, ROW, COLUMN)
         loop(FPSCLOCK, FPS)
 
 
