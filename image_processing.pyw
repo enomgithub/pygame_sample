@@ -242,7 +242,7 @@ def convert(surface, func, path):
         return src_conv
 
 
-def loop(surface, src, fpsclock, fps):
+def loop(fpsclock, fps):
     pygame.display.update()
     fpsclock.tick(fps)
 
@@ -276,7 +276,7 @@ def main():
         for i in range(3):
             for j in range(4):
                 SURFACE.blit(src[i * 4 + j], (WIDTH * j, HEIGHT * i))
-        loop(SURFACE, src, FPSCLOCK, FPS)
+        loop(FPSCLOCK, FPS)
 
 
 if __name__ == "__main__":
