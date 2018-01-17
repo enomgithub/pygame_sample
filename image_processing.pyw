@@ -180,27 +180,46 @@ def blur(surface, data, data_conv):
             data_conv[x][y] = (r, g, b)
 
 
+def fill(surface, data, data_conv, x, y, x_step, y_step):
+    r_total, g_total, b_total = 0, 0, 0
+    for y_offset in range(y, y + y_step):
+        for x_offset in range(x, x + x_step):
+            rgb = data[x_offset][y_offset]
+            r, g, b, _ = surface.unmap_rgb(rgb)
+            r_total += r
+            g_total += g
+            b_total += b
+    r = int(r_total / (x_step * y_step))
+    g = int(g_total / (x_step * y_step))
+    b = int(b_total / (x_step * y_step))
+    for y_offset in range(y, y + y_step):
+        for x_offset in range(x, x + x_step):
+            data_conv[x_offset][y_offset] = (r, g, b)
+
+
 def mosaic(surface, data, data_conv):
     width = len(data)
     height = len(data[0])
     step = min(width, height) // 4
-    for y in range(0, height, step):
+    width_div_step = width // step
+    height_div_step = height // step
+    width_mod_step = width % step
+    height_mod_step = height % step
+    for y in range(0, height - height_mod_step, step):
+        for x in range(0, width - width_mod_step, step):
+            fill(surface, data, data_conv, x, y, step, step)
+    if width_mod_step:
+        for y in range(0, height, step):
+            fill(surface, data, data_conv,
+                 step * width_div_step, y, width_mod_step, step)
+    if height_mod_step:
         for x in range(0, width, step):
-            r_total, g_total, b_total = 0, 0, 0
-
-            for y_offset in range(y, y + step):
-                for x_offset in range(x, x + step):
-                    rgb = data[x_offset][y_offset]
-                    r, g, b, _ = surface.unmap_rgb(rgb)
-                    r_total += r
-                    g_total += g
-                    b_total += b
-            r = int(r_total / step ** 2)
-            g = int(g_total / step ** 2)
-            b = int(b_total / step ** 2)
-            for y_offset in range(y, y + step):
-                for x_offset in range(x, x + step):
-                    data_conv[x_offset][y_offset] = (r, g, b)
+            fill(surface, data, data_conv,
+                 x, step * height_div_step, step, height_mod_step)
+    if width_mod_step and height_mod_step:
+        fill(surface, data, data_conv,
+             step * width_div_step, step * height_div_step,
+             width_div_step, height_div_step)
 
 
 def ripple(surface, data, data_conv):
