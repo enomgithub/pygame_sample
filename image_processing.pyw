@@ -10,14 +10,21 @@ import pygame
 from pygame.locals import QUIT
 
 
+def get_size(data):
+    assert len(data) > 0 and len(data[0]) > 0, """
+        len(data) > 0 and len(data[0]) > 0 are required.)"""
+    width = len(data)
+    height = len(data[0])
+    return (width, height)
+
+
 def invert(r, g, b):
     MASK = 0xff
     return (r ^ MASK, g ^ MASK, b ^ MASK)
 
 
 def negative(surface, data):
-    width = len(data)
-    height = len(data[0])
+    width, height = get_size(data)
     for x in range(width):
         for y in range(height):
             rgb = data[x][y]
@@ -34,8 +41,7 @@ def to_gray(r, g, b):
 
 
 def grayscale(surface, data):
-    width = len(data)
-    height = len(data[0])
+    width, height = get_size(data)
     for x in range(width):
         for y in range(height):
             rgb = data[x][y]
@@ -48,8 +54,9 @@ def noise(surface, data):
     RGB_MAX = 255
     RGB_NOISE_MIN = -127
     RGB_NOISE_MAX = 127
-    width = len(data)
-    height = len(data[0])
+
+    width, height = get_size(data)
+
     for x in range(width):
         for y in range(height):
             rgb = data[x][y]
@@ -64,8 +71,9 @@ def noise(surface, data):
 def brightness(surface, data):
     BRIGHTNESS = 1.5
     RGB_MAX = 255
-    width = len(data)
-    height = len(data[0])
+
+    width, height = get_size(data)
+
     for x in range(width):
         for y in range(height):
             rgb = data[x][y]
@@ -80,8 +88,9 @@ def sin_curve(surface, data, data_conv):
     WAVES = 4
     RADIUS = 10
     WAVE_FREQ = (WAVES * math.pi * 2) / len(data[0])
-    width = len(data)
-    height = len(data[0])
+
+    width, height = get_size(data)
+
     for x in range(width):
         y_offset = math.floor(math.sin(x * WAVE_FREQ) * RADIUS)
         for y in range(height):
@@ -95,11 +104,10 @@ def sin_curve(surface, data, data_conv):
 def wave(surface, data, data_conv):
     AMP = 10
     WAVES = 8
-    step = (WAVES * math.pi * 2) / len(data)
 
+    step = (WAVES * math.pi * 2) / len(data)
     radius = 0
-    width = len(data)
-    height = len(data[0])
+    width, height = get_size(data)
 
     for y in range(height):
         radius += step
@@ -114,8 +122,9 @@ def wave(surface, data, data_conv):
 def edge(surface, data):
     INTENSITY = 10
     RGB_MAX = 255
-    width = len(data)
-    height = len(data[0])
+
+    width, height = get_size(data)
+
     for y in range(1, height):
         for x in range(1, width):
             rgb_left = data[x - 1][y]
@@ -139,8 +148,7 @@ def emboss(surface, data, data_conv):
     B_BG = 128
     POWER = 3
 
-    width = len(data)
-    height = len(data[0])
+    width, height = get_size(data)
 
     for y in range(height):
         for x in range(1, width):
@@ -159,8 +167,7 @@ def emboss(surface, data, data_conv):
 def blur(surface, data, data_conv):
     POWER = 5
 
-    width = len(data)
-    height = len(data[0])
+    width, height = get_size(data)
 
     for y in range(height):
         for x in range(width):
@@ -202,13 +209,13 @@ def fill(surface, data, data_conv, x, y, x_step, y_step):
 
 
 def mosaic(surface, data, data_conv):
-    width = len(data)
-    height = len(data[0])
+    width, height = get_size(data)
     step = min(width, height) // 4
     width_div_step = width // step
     height_div_step = height // step
     width_mod_step = width % step
     height_mod_step = height % step
+
     for y in range(0, height - height_mod_step, step):
         for x in range(0, width - width_mod_step, step):
             fill(surface, data, data_conv, x, y, step, step)
@@ -230,8 +237,7 @@ def ripple(surface, data, data_conv):
     WAVES = 25
     AMP = math.radians(5)
 
-    width = len(data)
-    height = len(data[0])
+    width, height = get_size(data)
     distance = math.hypot(width, height)
     scale = math.pi * 2 * WAVES / distance
 
@@ -255,6 +261,7 @@ def convert(surface, func, path):
     args = inspect.getfullargspec(func)[0]
     src = pygame.image.load(path).convert()
     data = pygame.PixelArray(src)
+
     if len(args) == 2:
         func(surface, data)
         del data
@@ -310,15 +317,16 @@ def main():
     CONVERT = [negative, grayscale, noise, brightness,
                sin_curve, wave, edge, emboss, blur,
                mosaic, ripple]
-    pygame.init()
     ROW = 3
     COLUMN = 4
-    surface = pygame.display.set_mode((width * COLUMN, height * ROW))
     FPS = 5
-    FPSCLOCK = pygame.time.Clock()
 
+    pygame.init()
+    surface = pygame.display.set_mode((width * COLUMN, height * ROW))
+    fpsclock = pygame.time.Clock()
     src = []
     src.append(pygame.image.load(path).convert())
+
     for func in CONVERT:
         src.append(convert(surface, func, path))
     while True:
@@ -326,7 +334,7 @@ def main():
             if event.type == QUIT:
                 quit()
         draw(surface, src, width, height, ROW, COLUMN)
-        loop(FPSCLOCK, FPS)
+        loop(fpsclock, FPS)
 
 
 if __name__ == "__main__":
