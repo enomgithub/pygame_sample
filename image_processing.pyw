@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import argparse
 import inspect
 import math
@@ -10,17 +11,25 @@ import pygame
 from pygame.locals import QUIT
 
 
+RGB_MAX = 255
+R_BG = 128
+G_BG = 128
+B_BG = 128
+R_WEIGHT = 0.299
+G_WEIGHT = 0.587
+B_WEIGHT = 0.114
+
+
 def get_size(data):
     assert len(data) > 0 and len(data[0]) > 0, """
         len(data) > 0 and len(data[0]) > 0 are required.)"""
     width = len(data)
     height = len(data[0])
-    return (width, height)
+    return width, height
 
 
 def invert(r, g, b):
-    MASK = 0xff
-    return (r ^ MASK, g ^ MASK, b ^ MASK)
+    return r ^ RGB_MAX, g ^ RGB_MAX, b ^ RGB_MAX
 
 
 def negative(surface, data):
@@ -34,13 +43,10 @@ def negative(surface, data):
 
 
 def to_gray(r, g, b):
-    R_WEIGHT = 0.299
-    G_WEIGHT = 0.587
-    B_WEIGHT = 0.114
     return math.floor(r * R_WEIGHT + g * G_WEIGHT + b * B_WEIGHT)
 
 
-def grayscale(surface, data):
+def gray_scale(surface, data):
     width, height = get_size(data)
     for x in range(width):
         for y in range(height):
@@ -51,16 +57,14 @@ def grayscale(surface, data):
 
 
 def noise(surface, data):
-    RGB_MAX = 255
-    RGB_NOISE_MIN = -127
-    RGB_NOISE_MAX = 127
-
+    rgb_noise_min = -127
+    rgb_noise_max = 127
     width, height = get_size(data)
 
     for x in range(width):
         for y in range(height):
             rgb = data[x][y]
-            rand = random.randint(RGB_NOISE_MIN, RGB_NOISE_MAX)
+            rand = random.randint(rgb_noise_min, rgb_noise_max)
             r, g, b, _ = surface.unmap_rgb(rgb)
             r = max(0, min(RGB_MAX, r + rand))
             g = max(0, min(RGB_MAX, g + rand))
@@ -69,30 +73,27 @@ def noise(surface, data):
 
 
 def brightness(surface, data):
-    BRIGHTNESS = 1.5
-    RGB_MAX = 255
-
+    power = 1.5
     width, height = get_size(data)
 
     for x in range(width):
         for y in range(height):
             rgb = data[x][y]
             r, g, b, _ = surface.unmap_rgb(rgb)
-            r = max(0, min(RGB_MAX, int(r * BRIGHTNESS)))
-            g = max(0, min(RGB_MAX, int(g * BRIGHTNESS)))
-            b = max(0, min(RGB_MAX, int(b * BRIGHTNESS)))
+            r = max(0, min(RGB_MAX, int(r * power)))
+            g = max(0, min(RGB_MAX, int(g * power)))
+            b = max(0, min(RGB_MAX, int(b * power)))
             data[x][y] = (r, g, b)
 
 
 def sin_curve(surface, data, data_conv):
-    WAVES = 4
-    RADIUS = 10
-    WAVE_FREQ = (WAVES * math.pi * 2) / len(data[0])
-
+    waves = 4
+    radius = 10
     width, height = get_size(data)
+    wave_freq = (waves * math.pi * 2) / height
 
     for x in range(width):
-        y_offset = math.floor(math.sin(x * WAVE_FREQ) * RADIUS)
+        y_offset = math.floor(math.sin(x * wave_freq) * radius)
         for y in range(height):
             if 0 <= y + y_offset < height:
                 rgb = data[x][y + y_offset]
@@ -102,17 +103,16 @@ def sin_curve(surface, data, data_conv):
 
 
 def wave(surface, data, data_conv):
-    AMP = 10
-    WAVES = 8
-
-    step = (WAVES * math.pi * 2) / len(data)
+    amp = 10
+    waves = 8
+    step = (waves * math.pi * 2) / len(data)
     radius = 0
     width, height = get_size(data)
 
     for y in range(height):
         radius += step
         y_offset = max(0, min(height - 1,
-                              math.floor(math.cos(radius) * AMP + y)))
+                              int(math.floor(math.cos(radius) * amp + y))))
         for x in range(width):
             rgb = data[x][y_offset]
             r, g, b, _ = surface.unmap_rgb(rgb)
@@ -120,9 +120,7 @@ def wave(surface, data, data_conv):
 
 
 def edge(surface, data):
-    INTENSITY = 10
-    RGB_MAX = 255
-
+    intensity = 10
     width, height = get_size(data)
 
     for y in range(1, height):
@@ -135,19 +133,14 @@ def edge(surface, data):
             r_top, g_top, b_top, _ = surface.unmap_rgb(rgb_top)
             r, g, b, _ = surface.unmap_rgb(rgb)
 
-            r = min((abs(r_left - r) + abs(r_top - r)) * INTENSITY, RGB_MAX)
-            g = min((abs(g_left - g) + abs(g_top - g)) * INTENSITY, RGB_MAX)
-            b = min((abs(b_left - b) + abs(b_top - b)) * INTENSITY, RGB_MAX)
+            r = min((abs(r_left - r) + abs(r_top - r)) * intensity, RGB_MAX)
+            g = min((abs(g_left - g) + abs(g_top - g)) * intensity, RGB_MAX)
+            b = min((abs(b_left - b) + abs(b_top - b)) * intensity, RGB_MAX)
             data[x][y] = (r, g, b)
 
 
 def emboss(surface, data, data_conv):
-    RGB_MAX = 255
-    R_BG = 128
-    G_BG = 128
-    B_BG = 128
-    POWER = 3
-
+    power = 3
     width, height = get_size(data)
 
     for y in range(height):
@@ -158,15 +151,14 @@ def emboss(surface, data, data_conv):
             r_left, g_left, b_left, _ = surface.unmap_rgb(rgb_left)
             r, g, b, _ = surface.unmap_rgb(rgb)
 
-            r = min(max(R_BG + math.floor((r - r_left) * POWER), 0), RGB_MAX)
-            g = min(max(G_BG + math.floor((g - g_left) * POWER), 0), RGB_MAX)
-            b = min(max(B_BG + math.floor((b - b_left) * POWER), 0), RGB_MAX)
+            r = min(max(R_BG + math.floor((r - r_left) * power), 0), RGB_MAX)
+            g = min(max(G_BG + math.floor((g - g_left) * power), 0), RGB_MAX)
+            b = min(max(B_BG + math.floor((b - b_left) * power), 0), RGB_MAX)
             data_conv[x][y] = (r, g, b)
 
 
 def blur(surface, data, data_conv):
-    POWER = 5
-
+    power = 5
     width, height = get_size(data)
 
     for y in range(height):
@@ -174,8 +166,8 @@ def blur(surface, data, data_conv):
             r_total, g_total, b_total = 0, 0, 0
             colors = 0
 
-            for y_diff in range(-POWER, POWER + 1):
-                for x_diff in range(-POWER, POWER + 1):
+            for y_diff in range(-power, power + 1):
+                for x_diff in range(-power, power + 1):
                     (x_pos, y_pos) = (x + x_diff, y + y_diff)
                     if 0 <= x_pos < width and 0 <= y_pos < height:
                         rgb = data[x_pos][y_pos]
@@ -234,18 +226,17 @@ def mosaic(surface, data, data_conv):
 
 
 def ripple(surface, data, data_conv):
-    WAVES = 25
-    AMP = math.radians(5)
-
+    waves = 25
+    amp = math.radians(5)
     width, height = get_size(data)
     distance = math.hypot(width, height)
-    scale = math.pi * 2 * WAVES / distance
+    scale = math.pi * 2 * waves / distance
 
     for y in range(height):
         for x in range(width):
             x_pos = x - width // 2
             y_pos = y - height // 2
-            angle = math.sin(math.hypot(x_pos, y_pos) * scale) * AMP
+            angle = math.sin(math.hypot(x_pos, y_pos) * scale) * amp
             sin_v, cos_v = math.sin(angle), math.cos(angle)
 
             x_src = math.floor((x_pos * cos_v - y_pos * sin_v) + width // 2)
@@ -279,7 +270,7 @@ def get_image_size(path):
     with Image.open(path) as img:
         width = img.size[0]
         height = img.size[1]
-    return (width, height)
+    return width, height
 
 
 def draw(surface, src, width, height, row, column):
@@ -290,9 +281,9 @@ def draw(surface, src, width, height, row, column):
             surface.blit(src[i * column + j], (x_left, y_top))
 
 
-def loop(fpsclock, fps):
+def loop(fps_clock, fps):
     pygame.display.update()
-    fpsclock.tick(fps)
+    fps_clock.tick(fps)
 
 
 def quit():
@@ -314,27 +305,26 @@ def main():
         print("Can not open this file.")
         return
 
-    CONVERT = [negative, grayscale, noise, brightness,
-               sin_curve, wave, edge, emboss, blur,
-               mosaic, ripple]
-    ROW = 3
-    COLUMN = 4
-    FPS = 5
+    conv_list = [negative, gray_scale, noise, brightness,
+                 sin_curve, wave, edge, emboss, blur,
+                 mosaic, ripple]
+    row = 3
+    column = 4
+    fps = 5
 
     pygame.init()
-    surface = pygame.display.set_mode((width * COLUMN, height * ROW))
-    fpsclock = pygame.time.Clock()
-    src = []
-    src.append(pygame.image.load(path).convert())
+    surface = pygame.display.set_mode((width * column, height * row))
+    fps_clock = pygame.time.Clock()
+    src = [pygame.image.load(path).convert()]
 
-    for func in CONVERT:
+    for func in conv_list:
         src.append(convert(surface, func, path))
     while True:
         for event in pygame.event.get():
             if event.type == QUIT:
                 quit()
-        draw(surface, src, width, height, ROW, COLUMN)
-        loop(fpsclock, FPS)
+        draw(surface, src, width, height, row, column)
+        loop(fps_clock, fps)
 
 
 if __name__ == "__main__":
