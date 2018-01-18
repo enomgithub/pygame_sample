@@ -26,17 +26,21 @@ def negative(surface, data):
             data[x][y] = (r_inv, g_inv, b_inv)
 
 
-def grayscale(surface, data):
+def to_gray(r, g, b):
     R_WEIGHT = 0.299
     G_WEIGHT = 0.587
     B_WEIGHT = 0.114
+    return math.floor(r * R_WEIGHT + g * G_WEIGHT + b * B_WEIGHT)
+
+
+def grayscale(surface, data):
     width = len(data)
     height = len(data[0])
     for x in range(width):
         for y in range(height):
             rgb = data[x][y]
             r, g, b, _ = surface.unmap_rgb(rgb)
-            gray = math.floor(r * R_WEIGHT + g * G_WEIGHT + b * B_WEIGHT)
+            gray = to_gray(r, g, b)
             data[x][y] = (gray, gray, gray)
 
 
